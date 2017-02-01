@@ -1,25 +1,97 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: 'RR'
+output: html_document
 ---
 
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo = TRUE)
+```
 
-## Loading and preprocessing the data
+## Loading required packages
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(scales)
+library(Hmisc)
+library(missForest)
+```
+
+## Reading Data
+
+```{r data, echo=TRUE}
+setwd("C:/Users/sthadiboina/Desktop/RR")
+data <- read.csv("activity.csv")
+
+```
 
 
+## Mean total number of steps taken per day
 
-## What is mean total number of steps taken per day?
+```{r sum, echo=TRUE}
+head(data)
+class(data$date)
+data$date <- as.Date(data$date, "%Y-%m-%d")
+data_one <- aggregate(steps~date,data = data, FUN=sum, na.rm = T)
+head(data_one)
+tail(data_one)
+class(data_one$date)
 
 
+##Histogram
+ggplot(data=data_one, aes(data_one$steps)) + geom_histogram(breaks=seq(0, max(data_one$steps), by=2500),col = "red", fill= "green", alpha=.5)+labs(title="Histogram for steps")+labs(x="Steps", y="days")
 
-## What is the average daily activity pattern?
+## Mean and Median
+mean_steps_day <- mean(data_one$steps)
+mean_steps_day
+median_steps_day <- median(data_one$steps)
+```
+
+## Average daily activity pattern
+```{r average daily activity pattern, echo=TRUE}
+data_complete<- data[complete.cases(data),]
+head(data_complete)
+data_agg <- aggregate(steps~interval,data = data_complete, FUN=mean, na.rm = T)
+
+ggplot(data = data_agg,aes(interval, steps))+ geom_line(lty =1) + labs(labs(x="interval", y= "steps", title = "Time series plot of steps across intervals"))
+
+##which interval has more steps
+data_max <- filter(data_agg, steps==max(steps))
+data_max
+max(data_agg$steps)
 
 
+```
 
 ## Imputing missing values
+```{r Imputing missing values, echo=TRUE}
+Num_rows_na <- nrow(data)-nrow(data_complete)
+Num_rows_na
+nrow(data)
+nrow(data_complete)
+Num_rows_na <- nrow(data[!complete.cases(data),])
+
+data$steps2 <-with(data,impute(steps, mean))
+data_two <- aggregate(steps2~date,data = data, FUN=sum, na.rm = T)
+ggplot(data=data_two, aes(steps2)) + geom_histogram(breaks=seq(0, max(data_one$steps), by=2500),col = "red", fill= "blue", alpha=.5)+labs(title="Histogram for imputed steps")+labs(x="Steps", y="days")
+mean_steps_day2 <- mean(data_two$steps2)
+mean_steps_day2
+median_steps_day2 <- median(data_two$steps2)
 
 
+```
 
-## Are there differences in activity patterns between weekdays and weekends?
+## Are there differences in activity patterns between weekdays and weekends
+```{r weekdays and weekends}
+
+data$day <- weekdays(data$date)
+data$day_type <- ifelse(data$day %in% c("Saturday","Sunday"),"Weekend","Weekday")
+head(data)
+data3 <- aggregate(steps2 ~ interval+day_type, data = data, FUN = mean)
+ggplot(data = data3,aes(interval, steps2))+ geom_line(lty =1) + facet_grid(.~factor(day_type))+labs(x="interval", y= "steps", title = "weekdays and weekends")
+
+
+```
+
+
